@@ -53,19 +53,29 @@ enum Commands
 enum Commands scanCommand();
 void handleCommand(enum Commands command);
 
+void playGame();
+
+void finishGame();
+
+void releaseScreen();
+
 int main()
 {
     initializeScreen();
     waitingForStartGame();
-    while (gameOver == false)
-    {
-        drawGame();
-        enum Commands command = scanCommand();
-        handleCommand(command);
-        updateGame();
-        refreshScreen();
-    }
+    playGame();
+    finishGame();
+    releaseScreen();
+    return 0;
+}
 
+void releaseScreen()
+{
+    endwin();
+}
+
+void finishGame()
+{
     clear();
     if (gameOver == true)
     {
@@ -76,10 +86,19 @@ int main()
         mvprintw(row / 2, col / 2 - 5, "Good bye!");
     }
     refresh();
-
     sleep(2);
-    endwin();
-    return 1;
+}
+
+void playGame()
+{
+    while (gameOver == false)
+    {
+        drawGame();
+        enum Commands command = scanCommand();
+        handleCommand(command);
+        updateGame();
+        refreshScreen();
+    }
 }
 
 void handleCommand(enum Commands command)
