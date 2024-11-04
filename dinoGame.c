@@ -7,12 +7,15 @@
 #include <stdbool.h>
 
 float score = 0;
-int row, col, dy = 0;
+int screenHeiht, screenWidth;
+int dinoY = 0;
 int jumpCoord[] = {3, 5, 6, 6, 5, 3, 0};
 int jumpStep = 0;
-int cactusX; // x coordinate of cactus
-// dx = 4
-char *cactusShape[] = {" ^ ", "<#>", "<#>", " # "};
+
+#define MAX_CACTUS 5
+
+int cactusPositions[MAX_CACTUS];
+int numberOfCactus = 0;
 
 bool gameOver = false;
 bool jump = false;
@@ -24,9 +27,11 @@ void drawGround();
 
 int keyPress();
 
-void drawCactus();
+void drawCactus(int atPosition);
 
-void moveCactus();
+void moveAllCactus();
+
+void checkGameOver();
 
 void dinoJump();
 
@@ -79,11 +84,11 @@ void finishGame()
     clear();
     if (gameOver == true)
     {
-        mvprintw(row / 2, col / 2 - 5, "Game Over");
+        mvprintw(screenHeiht / 2, screenWidth / 2 - 5, "Game Over");
     }
     else
     {
-        mvprintw(row / 2, col / 2 - 5, "Good bye!");
+        mvprintw(screenHeiht / 2, screenWidth / 2 - 5, "Good bye!");
     }
     refresh();
     sleep(2);
@@ -136,7 +141,7 @@ enum Commands scanCommand()
 
 void waitingForStartGame()
 {
-    mvprintw(row / 2, col / 2 - 13, "press any key to continue\n");
+    mvprintw(screenHeiht / 2, screenWidth / 2 - 13, "press any key to continue\n");
     getch();
 }
 
@@ -145,7 +150,7 @@ void initializeScreen()
     initscr();
     curs_set(0); // disable cursor
     noecho();
-    getmaxyx(stdscr, row, col);
+    getmaxyx(stdscr, screenHeiht, screenWidth);
 }
 
 void refreshScreen()
@@ -156,10 +161,71 @@ void refreshScreen()
     clear();
 }
 
+void removeOldCactus()
+{
+    if (numberOfCactus == 0)
+    {
+        return;
+    }
+    if (cactusPositions[0] <= 0)
+    {
+        numberOfCactus--;
+        for (int i = 0; i <= numberOfCactus; i++)
+        {
+            cactusPositions[i] = cactusPositions[i + 1];
+        }
+    }
+}
+
+#define MIN_SPACE_BETWEEN_CACTUS 17
+
+bool isItTimeToCreateNewCactus()
+{
+    if (numberOfCactus == MAX_CACTUS)
+    {
+        return false;
+    }
+    int positionOfLastCactus = cactusPositions[numberOfCactus - 1];
+    if (positionOfLastCactus > screenWidth - MIN_SPACE_BETWEEN_CACTUS)
+    {
+        return false;
+    }
+    srandom(time(NULL));
+    return random() % 100 < 50;
+}
+
+void createNewCactus()
+{
+    if (numberOfCactus < MAX_CACTUS)
+    {
+        cactusPositions[numberOfCactus] = screenWidth;
+        numberOfCactus++;
+    }
+}
+
+void invalidateCactusList()
+{
+    removeOldCactus();
+    if (isItTimeToCreateNewCactus())
+    {
+        createNewCactus();
+    }
+}
+
 void updateGame()
 {
-    moveCactus();
+    moveAllCactus();
+    invalidateCactusList();
     dinoJump(); // check if dino is jumping and jump
+    checkGameOver();
+}
+
+void drawAllCactus()
+{
+    for (int i = 0; i < numberOfCactus; i++)
+    {
+        drawCactus(cactusPositions[i]);
+    }
 }
 
 void drawGame()
@@ -167,27 +233,27 @@ void drawGame()
     drawMenu();
     drawGround();
     drawDino();
-    drawCactus();
+    drawAllCactus();
 }
 
 void drawMenu()
 {
     mvprintw(0, 0, "press 'q' to quit");
-    mvprintw(0, col - 10, "score: %d", (int)score);
-    mvprintw(0, col / 2 - 5, "<Dino Game>");
+    mvprintw(0, screenWidth - 10, "score: %d", (int)score);
+    mvprintw(0, screenWidth / 2 - 5, "<Dino Game>");
 }
 
 void drawGround()
 {
-    for (int i = 0; i < col; i++)
+    for (int i = 0; i < screenWidth; i++)
     {
-        mvaddch(row - 1, i, ' ' | A_STANDOUT);
+        mvaddch(screenHeiht - 1, i, ' ' | A_STANDOUT);
     }
 }
 
 void drawDino()
 {
-    mvaddch(row - dy - 2, 4, 'D' | A_BOLD);
+    mvaddch(screenHeiht - dinoY - 2, 4, 'D' | A_BOLD);
 }
 
 void dinoJump()
@@ -195,7 +261,7 @@ void dinoJump()
     if (jump == true)
     {
         jumpStep++;
-        dy = jumpCoord[jumpStep];
+        dinoY = jumpCoord[jumpStep];
         if (jumpStep == 6)
         {
             jump = false;
@@ -204,7 +270,7 @@ void dinoJump()
     }
     else
     {
-        dy = 0;
+        dinoY = 0;
     }
 }
 
@@ -230,65 +296,44 @@ int keyPress() // check if key is pressed
 int kbhit()
 {
     int ch = getch();
-    if (ch != ERR)
-    {
-        ungetch(ch);
-        return 1;
-    }
-    else
+    if (ch == ERR)
     {
         return 0;
     }
+    ungetch(ch);
+    return 1;
 }
 
-void moveCactus()
+void moveAllCactus()
 {
-    if (needNewСactus)
+    for (int i = 0; i < numberOfCactus; i++)
     {
-        needNewСactus = false;
-        cactusX = col;
+        cactusPositions[i] = cactusPositions[i] - 1;
     }
-    else
-    {
-        if (cactusX < 1)
-        {
-            needNewСactus = true;
-        }
-        else
-        {
-            cactusX = cactusX - 2;
-        }
-        bool isCollapsed = (cactusX <= 5 && cactusX > 3) && dy < 5;
-        if (isCollapsed)
-        {
-            gameOver = true;
-        }
-    }
-    // int waitingScoreForCactus;
-    // if (needСactus)
-    // {
-    //     needСactus = false;
-    //     srandom(time(NULL));
-    //     int r = 7 + rand() % 9;
-    //     waitingScoreForCactus = (int)score + r;
-    // }
-
-    // if ((int)score >= waitingScoreForCactus)
-    // {
-    //     waitingScoreForCactus = 0;
-    //     createCactus();
-    // }
-    // mvprintw(1, 0, "waiting score for cactus: %d", waitingScoreForCactus);
 }
 
-void drawCactus()
+void checkGameOver()
 {
-    if (cactusX < 0)
+    if (numberOfCactus == 0)
     {
         return;
     }
-    mvaddch(row - 2, cactusX, 't' | A_BOLD);
-    mvaddch(row - 3, cactusX, 'c' | A_BOLD);
-    mvaddch(row - 4, cactusX, 'a' | A_BOLD);
-    mvaddch(row - 5, cactusX, 'c' | A_BOLD);
+    int closestCactus = cactusPositions[0];
+    bool isCollapsed = (closestCactus <= 5 && closestCactus > 3) && dinoY < 5;
+    if (isCollapsed)
+    {
+        gameOver = true;
+    }
+}
+
+void drawCactus(int atPosition)
+{
+    if (atPosition < 0 || atPosition > screenWidth)
+    {
+        return;
+    }
+    mvaddch(screenHeiht - 2, atPosition, 't' | A_BOLD);
+    mvaddch(screenHeiht - 3, atPosition, 'c' | A_BOLD);
+    mvaddch(screenHeiht - 4, atPosition, 'a' | A_BOLD);
+    mvaddch(screenHeiht - 5, atPosition, 'c' | A_BOLD);
 }
