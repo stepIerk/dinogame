@@ -9,8 +9,12 @@
 float score = 0;
 int screenHeiht, screenWidth;
 int dinoY = 0;
-int jumpCoord[] = {3, 5, 6, 6, 5, 3, 0};
+int dinoX = 9;
+int jumpCoord[] = {3, 5, 6, 6, 6, 5, 5, 3, 2, 0};
 int jumpStep = 0;
+int jumpFrames = 9;
+
+int frame = 40000;
 
 #define MAX_CACTUS 5
 
@@ -86,10 +90,8 @@ void finishGame()
     {
         mvprintw(screenHeiht / 2, screenWidth / 2 - 5, "Game Over");
     }
-    else
-    {
-        mvprintw(screenHeiht / 2, screenWidth / 2 - 5, "Good bye!");
-    }
+    mvprintw(screenHeiht / 2 + 2, screenWidth / 2 - 5, "Score: %d", (int)score);
+
     refresh();
     sleep(2);
 }
@@ -156,7 +158,7 @@ void initializeScreen()
 void refreshScreen()
 {
     refresh();
-    usleep(100000);
+    usleep(frame);
     score = score + 0.1;
     clear();
 }
@@ -177,7 +179,7 @@ void removeOldCactus()
     }
 }
 
-#define MIN_SPACE_BETWEEN_CACTUS 17
+#define MIN_SPACE_BETWEEN_CACTUS screenWidth / 4
 
 bool isItTimeToCreateNewCactus()
 {
@@ -247,13 +249,14 @@ void drawGround()
 {
     for (int i = 0; i < screenWidth; i++)
     {
-        mvaddch(screenHeiht - 1, i, ' ' | A_STANDOUT);
+        mvaddch(screenHeiht - 1, i, '#');
+        // mvaddch(screenHeiht - 1, i, ' ' | A_STANDOUT);
     }
 }
 
 void drawDino()
 {
-    mvaddch(screenHeiht - dinoY - 2, 4, 'D' | A_BOLD);
+    mvaddch(screenHeiht - dinoY - 2, dinoX, 'D' | A_BOLD);
 }
 
 void dinoJump()
@@ -262,7 +265,7 @@ void dinoJump()
     {
         jumpStep++;
         dinoY = jumpCoord[jumpStep];
-        if (jumpStep == 6)
+        if (jumpStep == jumpFrames)
         {
             jump = false;
             jumpStep = 0;
@@ -319,7 +322,7 @@ void checkGameOver()
         return;
     }
     int closestCactus = cactusPositions[0];
-    bool isCollapsed = (closestCactus <= 5 && closestCactus > 3) && dinoY < 5;
+    bool isCollapsed = (closestCactus <= dinoX + 1 && closestCactus > dinoX - 1) && dinoY < 5;
     if (isCollapsed)
     {
         gameOver = true;
@@ -332,8 +335,8 @@ void drawCactus(int atPosition)
     {
         return;
     }
-    mvaddch(screenHeiht - 2, atPosition, 't' | A_BOLD);
-    mvaddch(screenHeiht - 3, atPosition, 'c' | A_BOLD);
-    mvaddch(screenHeiht - 4, atPosition, 'a' | A_BOLD);
-    mvaddch(screenHeiht - 5, atPosition, 'c' | A_BOLD);
+    mvaddch(screenHeiht - 2, atPosition, '>' | A_BOLD);
+    mvaddch(screenHeiht - 3, atPosition, '<' | A_BOLD);
+    mvaddch(screenHeiht - 4, atPosition, '>' | A_BOLD);
+    mvaddch(screenHeiht - 5, atPosition, '<' | A_BOLD);
 }
