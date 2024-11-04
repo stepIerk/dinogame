@@ -16,7 +16,7 @@ char *cactusShape[] = {" ^ ", "<#>", "<#>", " # "};
 
 bool gameOver = false;
 bool jump = false;
-bool needСactus = true;
+bool needNewСactus = true;
 
 void drawMenu();
 
@@ -26,39 +26,46 @@ int keyPress();
 
 void drawCactus();
 
-void cactusInit();
+void moveCactus();
 
 void dinoJump();
 
 void drawDino();
 
-void paint();
+void drawGame();
 
 int kbhit();
 
+void updateGame();
+
+void refreshScreen();
+
+void initializeScreen();
+
+void waitingForStartGame();
+enum Commands
+{
+    NOPE,
+    JUMP,
+    EXIT
+};
+
+enum Commands scanCommand();
+void handleCommand(enum Commands command);
+
 int main()
 {
-    initscr();
-    curs_set(0); // disable cursor
-
-    noecho();
-    getmaxyx(stdscr, row, col);
-    mvprintw(row / 2, col / 2 - 13, "press any key to continue\n");
-    getch();
-    printw("Game in progress\n");
+    initializeScreen();
+    waitingForStartGame();
     while (gameOver == false)
     {
-        if (!keyPress()) // check which key is pressed, if 'q' is pressed, return 0
-        {
-            break; // break the loop
-        }
-        paint(); // paint the screen
-
-        refresh();
-        usleep(100000);
-        score = score + 0.1;
-        clear();
+        drawGame();
+        enum Commands command = scanCommand();
+        handleCommand(command);
+        updateGame();
+        refreshScreen();
     }
+
     clear();
     if (gameOver == true)
     {
@@ -75,18 +82,77 @@ int main()
     return 1;
 }
 
-void paint()
+void handleCommand(enum Commands command)
+{
+    switch (command)
+    {
+    case JUMP:
+        jump = true;
+        break;
+    case EXIT:
+        gameOver = true;
+        break;
+    default:
+        break;
+    }
+}
+
+enum Commands scanCommand()
+{
+    nodelay(stdscr, TRUE); // enable key press
+    if (kbhit())
+    {
+        char ch = getch();
+        if (ch == 'q')
+        {
+            return EXIT;
+        }
+        else if (ch == ' ')
+        {
+            return JUMP;
+        }
+    }
+    return NOPE;
+}
+
+void waitingForStartGame()
+{
+    mvprintw(row / 2, col / 2 - 13, "press any key to continue\n");
+    getch();
+}
+
+void initializeScreen()
+{
+    initscr();
+    curs_set(0); // disable cursor
+    noecho();
+    getmaxyx(stdscr, row, col);
+}
+
+void refreshScreen()
+{
+    refresh();
+    usleep(100000);
+    score = score + 0.1;
+    clear();
+}
+
+void updateGame()
+{
+    moveCactus();
+    dinoJump(); // check if dino is jumping and jump
+}
+
+void drawGame()
 {
     drawMenu();
     drawGround();
-    dinoJump(); // check if dino is jumping and jump
     drawDino();
-    cactusInit();
+    drawCactus();
 }
 
 void drawMenu()
 {
-
     mvprintw(0, 0, "press 'q' to quit");
     mvprintw(0, col - 10, "score: %d", (int)score);
     mvprintw(0, col / 2 - 5, "<Dino Game>");
@@ -156,26 +222,25 @@ int kbhit()
     }
 }
 
-void cactusInit()
+void moveCactus()
 {
-    if (needСactus)
+    if (needNewСactus)
     {
-        needСactus = false;
+        needNewСactus = false;
         cactusX = col;
     }
     else
     {
-
         if (cactusX < 1)
         {
-            needСactus = true;
+            needNewСactus = true;
         }
         else
         {
             cactusX = cactusX - 2;
-            drawCactus();
         }
-        if ((cactusX <= 5 && cactusX > 3) && dy < 5)
+        bool isCollapsed = (cactusX <= 5 && cactusX > 3) && dy < 5;
+        if (isCollapsed)
         {
             gameOver = true;
         }
@@ -199,6 +264,10 @@ void cactusInit()
 
 void drawCactus()
 {
+    if (cactusX < 0)
+    {
+        return;
+    }
     mvaddch(row - 2, cactusX, 't' | A_BOLD);
     mvaddch(row - 3, cactusX, 'c' | A_BOLD);
     mvaddch(row - 4, cactusX, 'a' | A_BOLD);
